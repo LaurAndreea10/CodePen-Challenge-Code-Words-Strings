@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code Words · Strings — Evolution Case Study</title>
+  <style>
+    :root {
+      --bg: #060814;
+      --bg-2: #0b1020;
+      --card: rgba(12, 18, 34, 0.72);
+      --line: rgba(150, 187, 255, 0.18);
+      --text: #edf3ff;
+      --muted: #a8b8da;
+      --accent: #7be7ff;
+      --accent-2: #be8dff;
+      --accent-3: #8cffc6;
+      --gold: #ffd87b;
+      --shadow: 0 24px 80px rgba(0,0,0,0.42);
+      --max: 1280px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(123,231,255,.10), transparent 24%),
+        radial-gradient(circle at 82% 18%, rgba(190,141,255,.14), transparent 25%),
+        linear-gradient(180deg, #040611 0%, #08101d 42%, #05070c 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body.intro-lock { overflow: hidden; }
+
+    body.minimal-mode {
+      background: #f6f7fb;
+      color: #111827;
+    }
+
+    body.minimal-mode .bg-grid,
+    body.minimal-mode .noise,
+    body.minimal-mode .glow,
+    body.minimal-mode .hero-art,
+    body.minimal-mode .award-badge,
+    body.minimal-mode .intro-overlay,
+    body.minimal-mode .crowd-glow {
+      display: none;
+    }
+
+    body.minimal-mode .shell,
+    body.minimal-mode .toolbar,
+    body.minimal-mode .hero,
+    body.minimal-mode .section,
+    body.minimal-mode .kpi,
+    body.minimal-mode .card,
+    body.minimal-mode .level-copy,
+    body.minimal-mode .level-preview,
+    body.minimal-mode .frame-head,
+    body.minimal-mode .chip-group,
+    body.minimal-mode .quote-card,
+    body.minimal-mode .nav-links {
+      background: #fff;
+      color: #111827;
+      border-color: #e5e7eb;
+      box-shadow: none;
+    }
+
+    body.minimal-mode .muted,
+    body.minimal-mode .desc,
+    body.minimal-mode .delta-item,
+    body.minimal-mode .frame-head a,
+    body.minimal-mode .tiny-label,
+    body.minimal-mode .footer-note,
+    body.minimal-mode .quote-card,
+    body.minimal-mode p { color: #4b5563; }
+
+    body.minimal-mode .eyebrow,
+    body.minimal-mode .tag,
+    body.minimal-mode .toolbar button,
+    body.minimal-mode .nav-links a,
+    body.minimal-mode .button-link {
+      background: #fff;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    body.minimal-mode .toolbar button.active,
+    body.minimal-mode .nav-links a.active,
+    body.minimal-mode .button-link.primary {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, rgba(255,255,255,.55), transparent 84%);
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .05;
+      background-image: radial-gradient(rgba(255,255,255,.9) .45px, transparent .6px);
+      background-size: 8px 8px;
+      mix-blend-mode: soft-light;
+    }
+
+    .glow {
+      position: fixed;
+      width: 38vw;
+      height: 38vw;
+      border-radius: 50%;
+      filter: blur(72px);
+      opacity: .18;
+      pointer-events: none;
+      transition: transform 1.2s ease, opacity .6s ease;
+    }
+
+    .glow.a { top: -9vw; left: -10vw; background: var(--accent); }
+    .glow.b { top: 18vh; right: -9vw; background: var(--accent-2); }
+    .glow.c { bottom: -10vw; left: 26vw; background: var(--accent-3); }
+
+    .crowd-glow {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: -5vh;
+      height: 30vh;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 15% 100%, rgba(123,231,255,.22), transparent 22%),
+        radial-gradient(circle at 38% 100%, rgba(190,141,255,.18), transparent 20%),
+        radial-gradient(circle at 62% 100%, rgba(140,255,198,.18), transparent 18%),
+        radial-gradient(circle at 85% 100%, rgba(123,231,255,.16), transparent 20%);
+      filter: blur(28px);
+      opacity: .28;
+      transition: opacity .4s ease, transform .4s ease;
+      animation: crowdPulse 6s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    .crowd-glow.active {
+      opacity: .6;
+      transform: scaleY(1.08);
+    }
+
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, rgba(123,231,255,.08), transparent 25%),
+        linear-gradient(180deg, rgba(3,5,10,.98), rgba(6,8,18,.98));
+      transition: opacity .9s ease, visibility .9s ease;
+    }
+
+    .intro-overlay.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .intro-box {
+      width: min(760px, calc(100% - 32px));
+      text-align: center;
+      padding: 26px;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .intro-kicker {
+      color: var(--accent);
+      font-size: .86rem;
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      margin-bottom: 16px;
+    }
+
+    .intro-title {
+      margin: 0;
+      font-size: clamp(2rem, 8vw, 5rem);
+      line-height: .94;
+      letter-spacing: -.05em;
+    }
+
+    .intro-sub {
+      margin: 16px auto 0;
+      max-width: 44ch;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .intro-scan {
+      margin: 22px auto 0;
+      width: min(320px, 70%);
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(123,231,255,.9), transparent);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .intro-scan::after {
+      content: "";
+      position: absolute;
+      inset: -10px 0;
+      background: linear-gradient(90deg, transparent, rgba(190,141,255,.6), transparent);
+      animation: scan 1.5s linear infinite;
+    }
+
+    .shell {
+      width: min(var(--max), calc(100% - 24px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 10px;
+      z-index: 30;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(8,14,28,.7);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+      transform: translateY(18px);
+      opacity: 0;
+      animation: revealUp .9s ease .4s forwards;
+    }
+
+    .toolbar-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tiny-label { font-size: .82rem; color: var(--muted); padding-left: 4px; }
+
+    .chip-group,
+    .nav-links {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      flex-wrap: wrap;
+    }
+
+    .toolbar button,
+    .nav-links a {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font: inherit;
+      font-size: .92rem;
+      cursor: pointer;
+      transition: .25s ease;
+      text-decoration: none;
+    }
+
+    .toolbar button.active,
+    .toolbar button:hover,
+    .nav-links a:hover {
+      background: linear-gradient(90deg, rgba(123,231,255,.18), rgba(190,141,255,.18));
+      border-color: rgba(255,255,255,.12);
+    }
+
+    .hero {
+      position: relative;
+      margin-top: 18px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transform: translateY(26px);
+      opacity: 0;
+      animation: revealUp 1s ease .55s forwards;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: auto -10% -20% -10%;
+      height: 45%;
+      background: radial-gradient(circle at 50% 100%, rgba(123,231,255,.08), transparent 50%);
+      pointer-events: none;
+    }
+
+    .award-badge {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,216,123,.26);
+      background: rgba(255,216,123,.08);
+      color: var(--gold);
+      font-size: .82rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.02fr .98fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--accent);
+      font-size: .85rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 16px 0 12px;
+      max-width: 11ch;
+      font-size: clamp(2.3rem, 8vw, 5.8rem);
+      line-height: .94;
+      letter-spacing: -.055em;
+    }
+
+    .scramble { display: inline-block; }
+    .hero p, p, .muted { color: var(--muted); line-height: 1.72; }
+    .lead { max-width: 64ch; font-size: clamp(1rem, 2vw, 1.15rem); }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+
+    .button-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.24);
+    }
+
+    .button-link.primary {
+      background: linear-gradient(90deg, rgba(123,231,255,.22), rgba(190,141,255,.18));
+    }
+
+    .hero-kpis {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 12px;
+    }
+
+    .kpi {
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      transform: translateY(18px);
+      opacity: 0;
+      animation: revealUp .8s ease forwards;
+    }
+
+    .kpi:nth-child(1){ animation-delay: .8s; }
+    .kpi:nth-child(2){ animation-delay: .92s; }
+    .kpi:nth-child(3){ animation-delay: 1.04s; }
+
+    .kpi strong {
+      display: block;
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      line-height: 1;
+      letter-spacing: -.04em;
+      margin-bottom: 6px;
+    }
+
+    .hero-art {
+      position: relative;
+      min-height: 100%;
+      border-radius: 30px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(123,231,255,.18), transparent 26%),
+        radial-gradient(circle at 80% 24%, rgba(190,141,255,.18), transparent 30%),
+        linear-gradient(180deg, rgba(9,16,30,.78), rgba(6,9,18,.95));
+    }
+
+    .hero-art::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 20%, rgba(0,0,0,.2));
+      pointer-events: none;
+    }
+
+    .art-inner {
+      position: absolute;
+      inset: 0;
+      padding: 18px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .art-frame {
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.02);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      min-height: 280px;
+      position: relative;
+    }
+
+    .art-quote {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(8px);
+      font-size: .95rem;
+      line-height: 1.62;
+      color: #dfe9ff;
+    }
+
+    .hero-string {
+      transition: d .9s ease, opacity .5s ease;
+      animation: heroStringPulse 4.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .hero-string:nth-child(2){ animation-delay: .2s; }
+    .hero-string:nth-child(3){ animation-delay: .4s; }
+    .hero-string:nth-child(4){ animation-delay: .6s; }
+    .hero-string:nth-child(5){ animation-delay: .8s; }
+    .hero-string:nth-child(6){ animation-delay: 1s; }
+
+    .hero-spark { animation: sparkFloat 3.5s ease-in-out infinite; }
+    .hero-spark:nth-child(8){ animation-delay: .2s; }
+    .hero-spark:nth-child(9){ animation-delay: .9s; }
+    .hero-spark:nth-child(10){ animation-delay: 1.3s; }
+
+    .section {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 30px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      box-shadow: var(--shadow);
+      transform: translateY(18px);
+      opacity: 0;
+      animation: revealUp .85s ease forwards;
+    }
+
+    #overview { animation-delay: .7s; }
+    #concept { animation-delay: .8s; }
+    #process { animation-delay: .9s; }
+    #evolution { animation-delay: 1s; }
+    #final-result { animation-delay: 1.1s; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      letter-spacing: -.04em;
+      line-height: 1.02;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 14px;
+    }
+
+    .card,
+    .quote-card {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      transition: transform .25s ease, border-color .25s ease;
+    }
+
+    .card:hover,
+    .level-copy:hover,
+    .quote-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(123,231,255,.28);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .case-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .bullet-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .bullet-item,
+    .delta-item {
+      display: flex;
+      gap: 10px;
+      line-height: 1.6;
+      color: #dbe7ff;
+    }
+
+    .bullet-item::before,
+    .delta-item::before {
+      content: "✦";
+      color: var(--accent-3);
+      flex: 0 0 auto;
+    }
+
+    .timeline {
+      position: relative;
+      margin-top: 12px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 22px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, rgba(123,231,255,.18), rgba(190,141,255,.52), rgba(140,255,198,.16));
+    }
+
+    .level {
+      position: relative;
+      display: grid;
+      grid-template-columns: 72px 1.02fr .98fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .level--wide {
+      grid-template-columns: 72px minmax(0, 1fr);
+    }
+
+    .level--wide .level-copy {
+      display: none;
+    }
+
+    .level-marker {
+      position: sticky;
+      top: 84px;
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid rgba(123,231,255,.45);
+      background: linear-gradient(180deg, rgba(123,231,255,.18), rgba(190,141,255,.14));
+      font-weight: 800;
+      box-shadow: 0 0 0 8px rgba(6,8,20,.96);
+      z-index: 2;
+      transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+
+    .level:hover .level-marker {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 8px rgba(6,8,20,.96), 0 0 40px rgba(123,231,255,.14);
+    }
+
+    .level-copy,
+    .level-preview {
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .level-copy { padding: 20px; }
+
+    .stage {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #d4f4ff);
+      color: #07111f;
+      font-weight: 800;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .level h3 {
+      margin: 12px 0 10px;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      line-height: 1.08;
+      letter-spacing: -.03em;
+    }
+
+    .desc {
+      margin: 0 0 16px;
+      font-size: .98rem;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tag {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.11);
+      color: #dce7ff;
+      font-size: .89rem;
+    }
+
+    .delta {
+      display: grid;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .frame-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .frame-head strong { font-size: .96rem; }
+
+    .frame-head a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: .93rem;
+    }
+
+    iframe {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      border: 0;
+      background: #09101d;
+    }
+
+    .final-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .quote-card {
+      font-size: 1rem;
+      line-height: 1.74;
+    }
+
+    .footer-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.62;
+    }
+
+    .hidden { display: none !important; }
+
+    .level--featured .level-copy,
+    .level--featured .level-preview {
+      border-color: rgba(123,231,255,.28);
+      background:
+        linear-gradient(180deg, rgba(123,231,255,.05), rgba(255,255,255,.03)),
+        var(--card);
+    }
+
+    .level--featured .level-marker {
+      border-color: rgba(123,231,255,.75);
+      background: linear-gradient(180deg, rgba(123,231,255,.34), rgba(190,141,255,.24));
+      box-shadow:
+        0 0 0 8px rgba(6,8,20,.96),
+        0 0 36px rgba(123,231,255,.18);
+    }
+
+    .level--boss .level-copy,
+    .level--boss .level-preview {
+      border-color: rgba(255,216,123,.26);
+      background:
+        linear-gradient(180deg, rgba(255,216,123,.06), rgba(190,141,255,.04)),
+        var(--card);
+      position: relative;
+    }
+
+    .level--boss .level-copy::before,
+    .level--boss .level-preview::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at top right, rgba(255,216,123,.08), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(123,231,255,.07), transparent 26%);
+    }
+
+    .level--boss .level-marker {
+      border-color: rgba(255,216,123,.65);
+      background: linear-gradient(180deg, rgba(255,216,123,.32), rgba(190,141,255,.24));
+      color: #fff6db;
+      box-shadow:
+        0 0 0 8px rgba(6,8,20,.96),
+        0 0 48px rgba(255,216,123,.16);
+    }
+
+    .level-copy-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .level-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+
+    .level-meta span {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.09);
+      background: rgba(255,255,255,.04);
+      font-size: .82rem;
+      color: #dbe7ff;
+    }
+
+    .level-highlight {
+      margin: 0 0 16px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.035);
+      color: #edf3ff;
+      line-height: 1.65;
+    }
+
+    .level-highlight strong { color: var(--accent); }
+
+    .preview-shell {
+      position: relative;
+      z-index: 1;
+      padding: 14px;
+    }
+
+    .preview-stage {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      background: #09101d;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+
+    .preview-stage iframe {
+      min-height: 430px;
+    }
+
+    .preview-caption {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.55;
+    }
+
+    .level--featured .stage {
+      background: linear-gradient(90deg, #7be7ff, #be8dff);
+    }
+
+    .level--boss .stage {
+      background: linear-gradient(90deg, #ffd87b, #be8dff);
+      color: #1a1220;
+    }
+
+    .boss-showcase {
+      position: relative;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid rgba(255,216,123,.24);
+      background:
+        radial-gradient(circle at 100% 0%, rgba(255,216,123,.10), transparent 24%),
+        radial-gradient(circle at 0% 100%, rgba(123,231,255,.10), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.025));
+      box-shadow: var(--shadow);
+    }
+
+    .boss-header {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 16px;
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      position: relative;
+      z-index: 1;
+    }
+
+    .boss-copy h3 {
+      margin: 14px 0 12px;
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: -.04em;
+    }
+
+    .boss-copy p {
+      margin: 0;
+      max-width: 60ch;
+    }
+
+    .boss-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .boss-badge-row span {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color: #e8eeff;
+      font-size: .85rem;
+    }
+
+    .boss-side {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .boss-panel {
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.035);
+    }
+
+    .boss-panel strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: .98rem;
+    }
+
+    .boss-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.62;
+      font-size: .95rem;
+    }
+
+    .boss-preview-wrap {
+      padding: 14px;
+    }
+
+    .boss-preview {
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      background: #09101d;
+    }
+
+    .boss-preview iframe {
+      min-height: 620px;
+    }
+
+    .boss-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 0 14px 16px;
+    }
+
+    .boss-note {
+      color: var(--muted);
+      font-size: .94rem;
+      line-height: 1.6;
+    }
+
+    .final-showcase {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .final-main {
+      border-radius: 28px;
+      border: 1px solid rgba(255,216,123,.22);
+      background:
+        radial-gradient(circle at top right, rgba(255,216,123,.08), transparent 26%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.025));
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .final-main-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+
+    .final-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,216,123,.28);
+      background: rgba(255,216,123,.08);
+      color: var(--gold);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .final-main-body {
+      padding: 14px;
+    }
+
+    .final-main-body .preview-stage iframe {
+      min-height: 560px;
+    }
+
+    .final-side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .final-panel,
+    .final-metrics,
+    .final-outcome {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+    }
+
+    .final-panel h3,
+    .final-outcome h3 {
+      margin: 0 0 12px;
+      font-size: 1.08rem;
+      letter-spacing: -.02em;
+    }
+
+    .final-panel p,
+    .final-outcome p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.68;
+    }
+
+    .final-metrics {
+      display: grid;
+      gap: 10px;
+    }
+
+    .final-metric {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+
+    .final-metric strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1rem;
+      color: #fff;
+    }
+
+    .final-metric span {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: .94rem;
+    }
+
+    body.minimal-mode .level--featured .level-copy,
+    body.minimal-mode .level--featured .level-preview,
+    body.minimal-mode .level--boss .level-copy,
+    body.minimal-mode .level--boss .level-preview,
+    body.minimal-mode .boss-showcase,
+    body.minimal-mode .boss-panel,
+    body.minimal-mode .final-main,
+    body.minimal-mode .final-panel,
+    body.minimal-mode .final-metrics,
+    body.minimal-mode .final-outcome,
+    body.minimal-mode .final-metric,
+    body.minimal-mode .preview-stage,
+    body.minimal-mode .boss-preview {
+      background: #fff;
+      border-color: #e5e7eb;
+      box-shadow: none;
+    }
+
+    body.minimal-mode .level-meta span,
+    body.minimal-mode .level-highlight,
+    body.minimal-mode .final-badge,
+    body.minimal-mode .boss-badge-row span {
+      background: #fff;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    body.minimal-mode .level--boss .stage,
+    body.minimal-mode .level--featured .stage {
+      color: #111827;
+    }
+
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes heroStringPulse {
+      0%, 100% { transform: translateY(0px); opacity: .86; }
+      50% { transform: translateY(-2px); opacity: 1; }
+    }
+
+    @keyframes sparkFloat {
+      0%, 100% { transform: translateY(0) scale(1); opacity: .7; }
+      50% { transform: translateY(-7px) scale(1.15); opacity: 1; }
+    }
+
+    @keyframes crowdPulse {
+      0%, 100% { opacity: .22; transform: scaleY(1); }
+      50% { opacity: .35; transform: scaleY(1.05); }
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(110%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+      .intro-overlay { display: none; }
+      body.intro-lock { overflow: auto; }
+    }
+
+    @media (max-width: 1100px) {
+      .boss-header,
+      .final-showcase {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .cards,
+      .case-grid,
+      .level,
+      .hero-kpis {
+        grid-template-columns: 1fr;
+      }
+
+      .level--wide {
+        grid-template-columns: 1fr;
+      }
+
+      .timeline::before { left: 14px; }
+
+      .level-marker {
+        position: relative;
+        top: 0;
+        margin-left: -8px;
+        box-shadow: 0 0 0 6px rgba(6,8,20,.96);
+      }
+
+      .toolbar { align-items: stretch; }
+      .toolbar-group, .chip-group, .nav-links { width: 100%; }
+      .toolbar button, .nav-links a { flex: 1 1 auto; }
+
+      iframe,
+      .preview-stage iframe {
+        min-height: 320px;
+      }
+
+      .boss-preview iframe,
+      .final-main-body .preview-stage iframe {
+        min-height: 380px;
+      }
+
+      .boss-header {
+        padding: 16px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell { width: min(var(--max), calc(100% - 16px)); }
+      .hero, .section { padding: 14px; }
+      .toolbar { top: 8px; }
+      .award-badge { position: static; display: inline-block; margin-bottom: 10px; }
+      .button-link { width: 100%; }
+      iframe { min-height: 260px; }
+      h1 { max-width: 9ch; }
+      .intro-box { padding: 18px; }
+
+      .preview-shell,
+      .boss-preview-wrap,
+      .final-main-body {
+        padding: 10px;
+      }
+
+      .boss-preview iframe,
+      .final-main-body .preview-stage iframe,
+      .preview-stage iframe {
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body class="intro-lock">
+  <div class="intro-overlay" id="intro-overlay" aria-hidden="true">
+    <div class="intro-box">
+      <div class="intro-kicker">Code Words · Strings</div>
+      <h2 class="intro-title scramble" id="intro-title">Evolution Challenge</h2>
+      <p class="intro-sub" id="intro-sub">Loading the journey from first interaction to final neon performance.</p>
+      <div class="intro-scan"></div>
+    </div>
+  </div>
+
+  <div class="bg-grid"></div>
+  <div class="noise"></div>
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="glow c"></div>
+  <div class="crowd-glow" id="crowd-glow"></div>
+
+  <main class="shell">
+    <section class="toolbar" aria-label="Controls">
+      <div class="toolbar-group">
+        <span class="tiny-label" data-i18n="labelLanguage">Limbă / Language</span>
+        <div class="chip-group">
+          <button class="active" data-lang="ro">RO</button>
+          <button data-lang="en">EN</button>
+        </div>
+      </div>
+
+      <div class="toolbar-group">
+        <span class="tiny-label" data-i18n="labelStyle">Stil / Style</span>
+        <div class="chip-group">
+          <button class="active" data-variant="premium">Premium / Cinematic</button>
+          <button data-variant="minimal">Minimal</button>
+        </div>
+      </div>
+
+      <div class="toolbar-group">
+        <span class="tiny-label" data-i18n="labelLayout">Afișare / Layout</span>
+        <div class="chip-group">
+          <button class="active" data-view="timeline">Timeline</button>
+          <button data-view="compact">Compact</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero" id="top">
+      <div class="award-badge" data-i18n="awardBadge">Award-style case study</div>
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow" data-i18n="eyebrow">CodePen Challenge · Code Words · Strings</div>
+          <h1 data-i18n="heroTitle">Provocarea evoluției în 6 nivele</h1>
+          <p class="lead" data-i18n="heroText">De la un experiment simplu cu corzi interactive la o experiență neon, muzicală și cinematică. Fiecare nivel arată clar drumul: <strong>de unde am început</strong> și <strong>unde am ajuns</strong>.</p>
+
+          <div class="hero-actions">
+            <a class="button-link primary" href="#evolution" data-i18n="ctaPrimary">Vezi evoluția</a>
+            <a class="button-link" href="#final-result" data-i18n="ctaSecondary">Vezi rezultatul final</a>
+          </div>
+
+          <div class="hero-kpis" id="hero-kpis"></div>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-inner">
+            <div class="art-frame">
+              <svg viewBox="0 0 620 380" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" id="hero-svg">
+                <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#7be7ff" />
+                    <stop offset="100%" stop-color="#be8dff" />
+                  </linearGradient>
+                  <filter id="gs">
+                    <feGaussianBlur stdDeviation="4" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+                <rect x="75" y="58" width="470" height="260" rx="28" stroke="rgba(255,255,255,0.12)"/>
+                <path class="hero-string" data-base="M115 95 Q310 58 505 95" d="M115 95 Q310 58 505 95" stroke="url(#g1)" stroke-width="3" filter="url(#gs)"/>
+                <path class="hero-string" data-base="M115 132 Q310 95 505 132" d="M115 132 Q310 95 505 132" stroke="url(#g1)" stroke-width="3" filter="url(#gs)" opacity=".95"/>
+                <path class="hero-string" data-base="M115 169 Q310 228 505 169" d="M115 169 Q310 228 505 169" stroke="url(#g1)" stroke-width="3" filter="url(#gs)" opacity=".92"/>
+                <path class="hero-string" data-base="M115 206 Q310 150 505 206" d="M115 206 Q310 150 505 206" stroke="url(#g1)" stroke-width="3" filter="url(#gs)" opacity=".90"/>
+                <path class="hero-string" data-base="M115 243 Q310 308 505 243" d="M115 243 Q310 308 505 243" stroke="url(#g1)" stroke-width="3" filter="url(#gs)" opacity=".88"/>
+                <path class="hero-string" data-base="M115 280 Q310 244 505 280" d="M115 280 Q310 244 505 280" stroke="url(#g1)" stroke-width="3" filter="url(#gs)" opacity=".84"/>
+                <circle class="hero-spark" cx="180" cy="120" r="3" fill="#7be7ff"/>
+                <circle class="hero-spark" cx="455" cy="250" r="3" fill="#be8dff"/>
+                <circle class="hero-spark" cx="300" cy="190" r="4" fill="#8cffc6"/>
+              </svg>
+            </div>
+            <div class="art-quote" data-i18n="quote">Nu este doar o colecție de variante. Este o hartă a evoluției: concept, interacțiune, atmosferă, fizică și polish final.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="overview">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" data-i18n="overviewTitle">Case study overview</h2>
+          <p class="muted" data-i18n="overviewText">Un single-page portfolio case study cu structură clară: Concept, Process, Evolution și Final Result. Include mod premium / cinematic, mod minimalist, RO / EN și layout optimizat pe mobil.</p>
+        </div>
+        <nav class="nav-links" aria-label="Section navigation">
+          <a href="#concept" data-i18n="navConcept">Concept</a>
+          <a href="#process" data-i18n="navProcess">Process</a>
+          <a href="#evolution" data-i18n="navEvolution">Evolution</a>
+          <a href="#final-result" data-i18n="navFinal">Final Result</a>
+        </nav>
+      </div>
+      <div class="cards" id="summary"></div>
+    </section>
+
+    <section class="section" id="concept">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" data-i18n="conceptTitle">Concept</h2>
+          <p class="muted" data-i18n="conceptText">Tema a pornit din jocul de sens al cuvântului “strings”: corzi muzicale, stringuri în programare și tensiunea dintre gest, sunet și text.</p>
+        </div>
+      </div>
+      <div class="case-grid" id="concept-grid"></div>
+    </section>
+
+    <section class="section" id="process">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" data-i18n="processTitle">Process</h2>
+          <p class="muted" data-i18n="processText">Procesul a trecut prin mai multe straturi: validarea mecanicii, explorarea atmosferei, mutarea spre abstracție, apoi rafinarea interacțiunii și a polish-ului final.</p>
+        </div>
+      </div>
+      <div class="case-grid" id="process-grid"></div>
+    </section>
+
+    <section class="section" id="evolution">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" data-i18n="levelsTitle">Evolution</h2>
+          <p class="muted" data-i18n="levelsText">Parcurge fiecare etapă și vezi cum proiectul a trecut de la o bază interactivă simplă la o experiență vizuală matură și expresivă.</p>
+        </div>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="section" id="final-result">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title" data-i18n="finalTitle">Final Result</h2>
+          <p class="muted" data-i18n="finalText">Versiunea finală reunește cele mai puternice idei din toată evoluția: gest direct, atmosferă, identitate și control vizual.</p>
+        </div>
+      </div>
+      <div class="final-grid" id="final-grid"></div>
+      <p class="footer-note" data-i18n="footerNote">Poți schimba textele, ordinea nivelelor, limba implicită și stilul implicit direct din obiectele JavaScript.</p>
+    </section>
+  </main>
+
+  <script>
+    const copy = {
+      ro: {
+        awardBadge: "Award-style case study",
+        eyebrow: "CodePen Challenge · Code Words · Strings",
+        heroTitle: "Provocarea evoluției în 6 nivele",
+        heroText: "De la un experiment simplu cu corzi interactive la o experiență neon, muzicală și cinematică. Fiecare nivel arată clar drumul: <strong>de unde am început</strong> și <strong>unde am ajuns</strong>.",
+        ctaPrimary: "Vezi evoluția",
+        ctaSecondary: "Vezi rezultatul final",
+        quote: "Nu este doar o colecție de variante. Este o hartă a evoluției: concept, interacțiune, atmosferă, fizică și polish final.",
+        overviewTitle: "Case study overview",
+        overviewText: "Un single-page portfolio case study cu structură clară: Concept, Process, Evolution și Final Result. Include mod premium / cinematic, mod minimalist, RO / EN și layout optimizat pe mobil.",
+        conceptTitle: "Concept",
+        conceptText: "Tema a pornit din jocul de sens al cuvântului “strings”: corzi muzicale, stringuri în programare și tensiunea dintre gest, sunet și text.",
+        processTitle: "Process",
+        processText: "Procesul a trecut prin mai multe straturi: validarea mecanicii, explorarea atmosferei, mutarea spre abstracție, apoi rafinarea interacțiunii și a polish-ului final.",
+        levelsTitle: "Evolution",
+        levelsText: "Parcurge fiecare etapă și vezi cum proiectul a trecut de la o bază interactivă simplă la o experiență vizuală matură și expresivă.",
+        finalTitle: "Final Result",
+        finalText: "Versiunea finală reunește cele mai puternice idei din toată evoluția: gest direct, atmosferă, identitate și control vizual.",
+        footerNote: "Poți schimba textele, ordinea nivelelor, limba implicită și stilul implicit direct din obiectele JavaScript.",
+        labelLanguage: "Limbă / Language",
+        labelStyle: "Stil / Style",
+        labelLayout: "Afișare / Layout",
+        navConcept: "Concept",
+        navProcess: "Process",
+        navEvolution: "Evolution",
+        navFinal: "Final Result",
+        kpis: [
+          { value: "6", label: "nivele de evoluție" },
+          { value: "2", label: "stiluri de prezentare" },
+          { value: "RO/EN", label: "bilingv + mobile-first" }
+        ],
+        summary: [
+          { title: "Punct de plecare", text: "Interacțiune simplă, corzi, text dinamic și o idee clară de bază." },
+          { title: "Zona de explorare", text: "Sunet, compoziție, abstracție, scenografie și mai multă personalitate vizuală." },
+          { title: "Forma finală", text: "Drag real pe corzi, elasticitate, SVG, polish cinematic și storytelling puternic." }
+        ],
+        conceptCards: [
+          { title: "Ideea centrală", text: "Am vrut să transform challenge-ul într-o experiență care leagă codul de muzică și de gest. “Strings” devine în același timp metaforă și mecanică interactivă.", bullets: ["dublu sens: code strings + strings muzicale", "textul devine feedback", "interacțiunea devine narațiune"] },
+          { title: "Direcția vizuală", text: "Direcția a crescut de la o interfață clară și simplă la o atmosferă neon, scenică și aproape performativă.", bullets: ["clean → expressive", "utility → atmosphere", "demo → experiență"] }
+        ],
+        processCards: [
+          { title: "Cum a evoluat", text: "Fiecare iterație a adăugat un strat diferit, fără să piardă ideea de bază.", bullets: ["mecanică validată", "sunet și stare", "abstracție vizuală", "drag și elasticitate", "polish final"] },
+          { title: "Ce s-a rafinat", text: "Pe parcurs s-au maturizat atât interacțiunea, cât și compoziția vizuală și storytelling-ul.", bullets: ["mai mult control", "mai multă prezență scenică", "mai multă coerență între concept și rezultat"] }
+        ],
+        finalCards: [
+          { title: "Ce comunică versiunea finală", text: "Nu doar că funcționează mai bine. Arată și mai sigur pe el ca obiect creativ: mai clar, mai matur, mai memorabil." },
+          { title: "De ce funcționează", text: "Pentru că fiecare strat nou nu înlocuiește ideea inițială, ci o amplifică: text, sunet, gest, lumină și compoziție lucrează împreună." }
+        ],
+        viewPen: "Vezi pe CodePen",
+        introTitle: "Provocarea evoluției",
+        introSub: "Încărcăm drumul de la prima interacțiune la performance-ul final neon.",
+        bossBadge: "Boss level / final evolution",
+        finalShowcaseBadge: "Final showcase",
+        finalPanelTitle: "Versiunea care închide povestea",
+        finalPanelText: "Aici proiectul nu mai arată ca o succesiune de teste. Arată ca un obiect creativ final: coerent, memorabil și mult mai sigur pe identitatea lui.",
+        finalOutcomeTitle: "De ce versiunea finală funcționează",
+        finalOutcomeText: "Pentru că nu pare doar mai bogată, ci mai controlată. Gestul, lumina, atmosfera și structura compoziției trag toate în aceeași direcție.",
+        bossPreviewNote: "Aici merită accentul maxim: este punctul în care toate deciziile vizuale și tehnice se aliniază.",
+        levels: [
+          {
+            nr: "01",
+            stage: "Nivelul 1 · Primul sunet",
+            title: "Baza: ideea devine interactivă",
+            desc: "Aici începe totul. Avem instrumentul, corzile și schimbarea textului la hover sau tap. Este punctul zero al conceptului “Strings”: simplu, clar și ușor de înțeles.",
+            tags: ["6 corzi", "hover/tap", "text dinamic", "look clean"],
+            progress: [
+              "Am validat mecanica principală: utilizatorul atinge o coardă și primește feedback imediat.",
+              "Am creat fundația vizuală și interactivă pe care poți construi toate versiunile următoare."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/qEayxmR?default-tab=result"
+          },
+          {
+            nr: "02",
+            stage: "Nivelul 2 · Cuvintele prind ritm",
+            title: "Challenge-ul capătă atmosferă și sunet",
+            desc: "În etapa asta, proiectul nu mai pare doar un demo. Devine o experiență. Apar mai multe corzi, energie de scenă, mesaje tematice și o atmosferă mai clară de challenge creativ.",
+            tags: ["7 corzi", "sound vibe", "mesaje tematice", "mai mult impact"],
+            progress: [
+              "Am trecut de la o interacțiune simplă la o compoziție cu identitate proprie.",
+              "Am adăugat strat emoțional: atmosferă, ritm și mai multă prezență scenică."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/NPRBygo?default-tab=result"
+          },
+          {
+            nr: "03",
+            stage: "Nivelul 3 · Experimentul vizual",
+            title: "String-urile devin sculptură generativă",
+            desc: "Aici ideea se rupe de forma clasică de instrument și intră într-o zonă artistică. “String” nu mai înseamnă doar coardă, ci și structură, flux și formă generativă.",
+            tags: ["canvas", "generative art", "abstracție", "explorare vizuală"],
+            progress: [
+              "Am arătat că tema poate fi interpretată și conceptual, nu doar literal.",
+              "Am extins vocabularul proiectului în direcția motion + art direction."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/EagpQwy?default-tab=result"
+          },
+          {
+            nr: "04",
+            stage: "Nivelul 4 · Scena de spectacol",
+            title: "Conceptul devine performance",
+            desc: "În acest punct, lucrarea are deja storytelling. Nu mai este doar despre input și output, ci despre cum arată și cum se simte tot momentul. E aproape un mini show digital.",
+            tags: ["live code set", "show energy", "lumini", "storytelling"],
+            progress: [
+              "Am dus proiectul din zona de experiment în zona de experiență memorabilă.",
+              "Am consolidat personalitatea vizuală și am dat proiectului o voce proprie."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/emdjVep?default-tab=result"
+          },
+          {
+            nr: "05",
+            stage: "Nivelul 5 · Corzi cu fizică reală",
+            title: "Interacțiunea devine mai vie și mai tactilă",
+            desc: "Aici apare primul salt tehnic care se simte imediat. Corzile nu mai sunt doar atinse: pot fi trase, deformate și lăsate să revină elastic. Interacțiunea capătă greutate, realism și o componentă mult mai tactilă.",
+            tags: ["drag", "elasticitate", "SVG", "feedback tactil"],
+            progress: [
+              "Am ridicat nivelul de complexitate tehnică și realismul interacțiunii.",
+              "Am mutat experiența de la click/hover la gest direct și expresiv."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/raMrJpx?default-tab=result"
+          },
+          {
+            nr: "06",
+            stage: "Nivelul 6 · Boss level",
+            title: "Forma finală: neon, control și polish complet",
+            desc: "Acesta este punctul în care totul se aliniază: fundal generativ, corzi neon, drag physics, compoziție mai matură și o prezentare mult mai sigură. Nu mai pare o iterație în plus, ci versiunea care închide clar întreaga evoluție.",
+            tags: ["neon strings", "polish final", "cinematic", "high impact"],
+            progress: [
+              "Am combinat cele mai bune idei din iterațiile anterioare într-o singură experiență coerentă.",
+              "Rezultatul final comunică nu doar skill tehnic, ci și evoluție de concept, gust vizual și direcție artistică."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/PwGBQQd?default-tab=result"
+          }
+        ]
+      },
+      en: {
+        awardBadge: "Award-style case study",
+        eyebrow: "CodePen Challenge · Code Words · Strings",
+        heroTitle: "The evolution challenge in 6 levels",
+        heroText: "From a simple interactive strings experiment to a neon, musical, cinematic experience. Each level makes the journey clear: <strong>where it started</strong> and <strong>where it arrived</strong>.",
+        ctaPrimary: "See the evolution",
+        ctaSecondary: "See the final result",
+        quote: "This is not just a collection of variations. It is a map of evolution: concept, interaction, atmosphere, physics, and final polish.",
+        overviewTitle: "Case study overview",
+        overviewText: "A single-page portfolio case study with a clear structure: Concept, Process, Evolution, and Final Result. Includes premium / cinematic mode, minimalist mode, RO / EN, and a mobile-optimized layout.",
+        conceptTitle: "Concept",
+        conceptText: "The theme started from the layered meaning of the word “strings”: musical strings, programming strings, and the tension between gesture, sound, and text.",
+        processTitle: "Process",
+        processText: "The process moved through several layers: validating the mechanic, exploring atmosphere, shifting into abstraction, then refining interaction and final polish.",
+        levelsTitle: "Evolution",
+        levelsText: "Go through each step and see how the project moved from a simple interactive base to a more mature and expressive visual experience.",
+        finalTitle: "Final Result",
+        finalText: "The final version brings together the strongest ideas from the whole evolution: direct gesture, atmosphere, identity, and visual control.",
+        footerNote: "You can change the texts, levels order, default language, and default style directly from the JavaScript objects.",
+        labelLanguage: "Language / Limbă",
+        labelStyle: "Style / Stil",
+        labelLayout: "View / Afișare",
+        navConcept: "Concept",
+        navProcess: "Process",
+        navEvolution: "Evolution",
+        navFinal: "Final Result",
+        kpis: [
+          { value: "6", label: "evolution levels" },
+          { value: "2", label: "presentation modes" },
+          { value: "RO/EN", label: "bilingual + mobile-first" }
+        ],
+        summary: [
+          { title: "Starting point", text: "Simple interaction, strings, dynamic text, and a clear initial idea." },
+          { title: "Exploration zone", text: "Sound, composition, abstraction, staging, and a stronger visual identity." },
+          { title: "Final form", text: "Real string dragging, elasticity, SVG, cinematic polish, and stronger storytelling." }
+        ],
+        conceptCards: [
+          { title: "Core idea", text: "I wanted to turn the challenge into an experience that connects code, music, and gesture. “Strings” becomes both metaphor and interactive mechanic.", bullets: ["double meaning: code strings + musical strings", "text becomes feedback", "interaction becomes narrative"] },
+          { title: "Visual direction", text: "The direction grew from a clear and simple interface into a neon, stage-like, almost performative atmosphere.", bullets: ["clean → expressive", "utility → atmosphere", "demo → experience"] }
+        ],
+        processCards: [
+          { title: "How it evolved", text: "Each iteration added a different layer without losing the core idea.", bullets: ["validated mechanic", "sound and mood", "visual abstraction", "drag and elasticity", "final polish"] },
+          { title: "What got refined", text: "Along the way, both the interaction and the visual composition matured, together with the storytelling.", bullets: ["more control", "stronger stage presence", "more coherence between concept and result"] }
+        ],
+        finalCards: [
+          { title: "What the final version communicates", text: "It does not only work better. It also feels more confident as a creative object: clearer, more mature, more memorable." },
+          { title: "Why it works", text: "Because every new layer does not replace the initial idea, but amplifies it: text, sound, gesture, light, and composition work together." }
+        ],
+        viewPen: "Open on CodePen",
+        introTitle: "Evolution Challenge",
+        introSub: "Loading the journey from first interaction to final neon performance.",
+        bossBadge: "Boss level / final evolution",
+        finalShowcaseBadge: "Final showcase",
+        finalPanelTitle: "The version that closes the story",
+        finalPanelText: "At this point, the project no longer feels like a sequence of tests. It feels like a final creative piece: coherent, memorable, and much more confident in its identity.",
+        finalOutcomeTitle: "Why the final version works",
+        finalOutcomeText: "Because it does not only feel richer, but more controlled. Gesture, light, atmosphere, and composition all pull in the same direction.",
+        bossPreviewNote: "This deserves the strongest emphasis: it is the point where all visual and technical decisions align.",
+        levels: [
+          {
+            nr: "01",
+            stage: "Level 1 · First note",
+            title: "The base: the idea becomes interactive",
+            desc: "This is where everything starts. We have the instrument, the strings, and text changes on hover or tap. It is the zero point of the “Strings” concept: simple, clear, and easy to read.",
+            tags: ["6 strings", "hover/tap", "dynamic text", "clean look"],
+            progress: [
+              "You validated the core mechanic: the user touches a string and gets instant feedback.",
+              "You built the visual and interactive foundation for every later iteration."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/qEayxmR?default-tab=result"
+          },
+          {
+            nr: "02",
+            stage: "Level 2 · Words find rhythm",
+            title: "The challenge gains atmosphere and sound",
+            desc: "At this stage, the project stops feeling like a simple demo. It becomes an experience. More strings appear, stage energy grows, thematic messages show up, and the challenge identity becomes stronger.",
+            tags: ["7 strings", "sound vibe", "thematic messages", "more impact"],
+            progress: [
+              "You moved from a simple interaction to a composition with its own identity.",
+              "You added emotional layering: atmosphere, rhythm, and more stage presence."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/NPRBygo?default-tab=result"
+          },
+          {
+            nr: "03",
+            stage: "Level 3 · Visual experiment",
+            title: "Strings become generative sculpture",
+            desc: "Here the idea breaks away from the classic instrument shape and enters a more artistic space. A “string” no longer means only a literal string, but also structure, flow, and generative form.",
+            tags: ["canvas", "generative art", "abstraction", "visual exploration"],
+            progress: [
+              "You showed that the theme can be interpreted conceptually, not only literally.",
+              "You expanded the project vocabulary toward motion and art direction."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/EagpQwy?default-tab=result"
+          },
+          {
+            nr: "04",
+            stage: "Level 4 · Performance stage",
+            title: "The concept becomes a performance",
+            desc: "At this point, the piece already has storytelling. It is no longer only about input and output, but also about how the whole moment looks and feels. It becomes a small digital show.",
+            tags: ["live code set", "show energy", "lights", "storytelling"],
+            progress: [
+              "You pushed the project from experiment into memorable experience.",
+              "You reinforced the visual personality and gave the work a stronger voice."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/emdjVep?default-tab=result"
+          },
+          {
+            nr: "05",
+            stage: "Level 5 · Real string physics",
+            title: "Interaction becomes more alive and tactile",
+            desc: "This is where the first technical leap becomes immediately visible. The strings are no longer only touched: they can be pulled, deformed, and released with elastic return. The interaction gains weight, realism, and a much more tactile quality.",
+            tags: ["drag", "elasticity", "SVG", "tactile feedback"],
+            progress: [
+              "You raised the technical complexity and realism of the interaction.",
+              "You shifted the experience from click/hover to a direct and expressive gesture."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/raMrJpx?default-tab=result"
+          },
+          {
+            nr: "06",
+            stage: "Level 6 · Boss level",
+            title: "Final form: neon, control, and complete polish",
+            desc: "This is the point where everything aligns: generative background, neon strings, drag physics, more mature composition, and a much more confident presentation. It no longer feels like just another iteration, but like the version that clearly closes the whole evolution.",
+            tags: ["neon strings", "final polish", "cinematic", "high impact"],
+            progress: [
+              "You combined the strongest ideas from previous iterations into one coherent experience.",
+              "The final result communicates not only technical skill, but also concept evolution, visual taste, and artistic direction."
+            ],
+            pen: "https://codepen.io/Laura-Andreea-the-typescripter/embed/PwGBQQd?default-tab=result"
+          }
+        ]
+      }
+    };
+
+    let state = { lang: 'ro', variant: 'premium', view: 'timeline' };
+
+    const summaryEl = document.getElementById('summary');
+    const timelineEl = document.getElementById('timeline');
+    const conceptGrid = document.getElementById('concept-grid');
+    const processGrid = document.getElementById('process-grid');
+    const finalGrid = document.getElementById('final-grid');
+    const heroKpis = document.getElementById('hero-kpis');
+    const introOverlay = document.getElementById('intro-overlay');
+    const introTitle = document.getElementById('intro-title');
+    const introSub = document.getElementById('intro-sub');
+    const crowdGlow = document.getElementById('crowd-glow');
+    const heroSvg = document.getElementById('hero-svg');
+
+    function applyStaticCopy() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (copy[state.lang][key]) el.innerHTML = copy[state.lang][key];
+      });
+      introSub.textContent = copy[state.lang].introSub;
+    }
+
+    function renderHeroKpis() {
+      heroKpis.innerHTML = copy[state.lang].kpis.map(item => `
+        <article class="kpi">
+          <strong>${item.value}</strong>
+          <span class="muted">${item.label}</span>
+        </article>
+      `).join('');
+    }
+
+    function renderCards(target, items) {
+      target.innerHTML = items.map(item => `
+        <article class="card">
+          <strong>${item.title}</strong>
+          <p>${item.text}</p>
+          ${item.bullets ? `<div class="bullet-list">${item.bullets.map(b => `<div class="bullet-item">${b}</div>`).join('')}</div>` : ''}
+        </article>
+      `).join('');
+    }
+
+    function renderSummary() {
+      summaryEl.innerHTML = copy[state.lang].summary.map(item => `
+        <article class="card">
+          <strong>${item.title}</strong>
+          <p>${item.text}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderBossLevel(level) {
+      const levelLink = level.pen.replace('/embed/', '/pen/').replace('?default-tab=result', '');
+      const statPills = state.lang === 'ro'
+        ? ['Versiune finală', 'Cel mai mare impact', 'Toate straturile aliniate']
+        : ['Final version', 'Strongest impact', 'All layers aligned'];
+
+      const sideCards = state.lang === 'ro'
+        ? [
+            {
+              title: 'Ce schimbă acest nivel',
+              text: 'Nu mai este doar o demonstrație de interacțiune. Devine piesa care sintetizează atmosfera, controlul vizual și maturitatea compoziției.'
+            },
+            {
+              title: 'De ce trebuie pus în evidență',
+              text: 'Este punctul în care utilizatorul înțelege imediat că proiectul are finalitate, identitate și o închidere clară de proces.'
+            }
+          ]
+        : [
+            {
+              title: 'What this level changes',
+              text: 'It is no longer only an interaction demo. It becomes the piece that synthesizes atmosphere, visual control, and compositional maturity.'
+            },
+            {
+              title: 'Why it should be highlighted',
+              text: 'It is the point where the viewer immediately understands that the project has closure, identity, and a clear final outcome.'
+            }
+          ];
+
+      return `
+        <article class="level level--wide level--boss">
+          <div class="level-marker">${level.nr}</div>
+
+          <div class="boss-showcase">
+            <div class="boss-header">
+              <div class="boss-copy">
+                <span class="stage">${level.stage}</span>
+                <h3>${level.title}</h3>
+                <p>${level.desc}</p>
+
+                <div class="boss-badge-row">
+                  ${statPills.map(item => `<span>${item}</span>`).join('')}
+                </div>
+
+                <div class="delta" style="margin-top:16px;">
+                  ${level.progress.map(item => `<div class="delta-item">${item}</div>`).join('')}
+                </div>
+              </div>
+
+              <div class="boss-side">
+                ${sideCards.map(card => `
+                  <div class="boss-panel">
+                    <strong>${card.title}</strong>
+                    <p>${card.text}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="boss-preview-wrap">
+              <div class="boss-preview">
+                <iframe
+                  title="${level.stage}"
+                  src="${level.pen}"
+                  loading="lazy"
+                  allowtransparency="true"
+                  allowfullscreen="true">
+                </iframe>
+              </div>
+            </div>
+
+            <div class="boss-footer">
+              <div class="boss-note">${copy[state.lang].bossPreviewNote}</div>
+              <a href="${levelLink}" target="_blank" rel="noopener noreferrer" class="button-link">${copy[state.lang].viewPen}</a>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderLevels() {
+      const levels = copy[state.lang].levels;
+      const compact = state.view === 'compact';
+
+      timelineEl.innerHTML = levels.map((level, index) => {
+        if (index === 5 && !compact) {
+          return renderBossLevel(level);
+        }
+
+        const isFeatured = index === 4;
+        const levelClass = ['level', isFeatured ? 'level--featured' : ''].join(' ').trim();
+
+        const featureLine = state.lang === 'ro'
+          ? 'Aici apare primul salt clar de <strong>realism interactiv</strong>: nu doar atingi, ci <strong>tragi</strong>, <strong>deformezi</strong> și <strong>simți revenirea elastică</strong>.'
+          : 'This is the first clear jump in <strong>interactive realism</strong>: you do not just touch the strings, you <strong>pull</strong>, <strong>deform</strong>, and <strong>feel the elastic return</strong>.';
+
+        const meta = state.lang === 'ro'
+          ? ['Salt tehnic major', 'Gest direct', 'Mai mult realism']
+          : ['Major technical jump', 'Direct gesture', 'Higher realism'];
+
+        const caption = state.lang === 'ro'
+          ? (index === 4
+              ? 'Preview-ul de mai jos trebuie să se simtă ca o demonstrație de interacțiune tactilă, nu doar ca un embed standard.'
+              : 'Preview live al etapei curente.')
+          : (index === 4
+              ? 'The preview below should feel like a tactile interaction demo, not just a standard embed.'
+              : 'Live preview of the current stage.');
+
+        return `
+          <article class="${levelClass}">
+            <div class="level-marker">${level.nr}</div>
+
+            <div class="level-copy">
+              <div class="level-copy-inner">
+                <span class="stage">${level.stage}</span>
+                <h3>${level.title}</h3>
+                <p class="desc">${level.desc}</p>
+
+                ${isFeatured ? `
+                  <div class="level-meta">
+                    ${meta.map(item => `<span>${item}</span>`).join('')}
+                  </div>
+                  <div class="level-highlight">${featureLine}</div>
+                ` : ''}
+
+                <div class="tags">
+                  ${level.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+
+                <div class="delta">
+                  ${level.progress.map(item => `<div class="delta-item">${item}</div>`).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="level-preview ${compact ? 'hidden' : ''}">
+              <div class="frame-head">
+                <strong>${level.stage}</strong>
+                <a href="${level.pen.replace('/embed/', '/pen/').replace('?default-tab=result', '')}" target="_blank" rel="noopener noreferrer">
+                  ${copy[state.lang].viewPen}
+                </a>
+              </div>
+
+              <div class="preview-shell">
+                <div class="preview-stage">
+                  <iframe
+                    title="${level.stage}"
+                    src="${level.pen}"
+                    loading="lazy"
+                    allowtransparency="true"
+                    allowfullscreen="true">
+                  </iframe>
+                </div>
+                <div class="preview-caption">${caption}</div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderFinal() {
+      const finalLevel = copy[state.lang].levels[5];
+      const finalPen = finalLevel.pen;
+
+      const metricCopy = state.lang === 'ro'
+        ? [
+            {
+              title: 'Interacțiune',
+              text: 'Drag-ul pe corzi și revenirea elastică transformă experiența din simplu trigger în gest expresiv.'
+            },
+            {
+              title: 'Identitate vizuală',
+              text: 'Neonul, glow-ul și compoziția mai matură dau lucrării o prezență recognoscibilă.'
+            },
+            {
+              title: 'Închidere de proces',
+              text: 'Se simte clar că versiunea finală adună cele mai bune decizii din etapele anterioare.'
+            }
+          ]
+        : [
+            {
+              title: 'Interaction',
+              text: 'String dragging and elastic return turn the experience from a simple trigger into an expressive gesture.'
+            },
+            {
+              title: 'Visual identity',
+              text: 'The neon treatment, glow, and more mature composition give the piece a recognizable presence.'
+            },
+            {
+              title: 'Process closure',
+              text: 'It clearly feels like the final version gathers the strongest decisions from the previous iterations.'
+            }
+          ];
+
+      finalGrid.innerHTML = `
+        <div class="final-showcase">
+          <div class="final-main">
+            <div class="final-main-top">
+              <div class="final-badge">${copy[state.lang].finalShowcaseBadge}</div>
+              <a href="${finalPen.replace('/embed/', '/pen/').replace('?default-tab=result', '')}" target="_blank" rel="noopener noreferrer" class="button-link">
+                ${copy[state.lang].viewPen}
+              </a>
+            </div>
+
+            <div class="final-main-body">
+              <div class="preview-stage">
+                <iframe
+                  title="${finalLevel.stage}"
+                  src="${finalPen}"
+                  loading="lazy"
+                  allowtransparency="true"
+                  allowfullscreen="true">
+                </iframe>
+              </div>
+            </div>
+          </div>
+
+          <div class="final-side">
+            <div class="final-panel">
+              <h3>${copy[state.lang].finalPanelTitle}</h3>
+              <p>${copy[state.lang].finalPanelText}</p>
+            </div>
+
+            <div class="final-metrics">
+              ${metricCopy.map(item => `
+                <div class="final-metric">
+                  <strong>${item.title}</strong>
+                  <span>${item.text}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="final-outcome">
+              <h3>${copy[state.lang].finalOutcomeTitle}</h3>
+              <p>${copy[state.lang].finalOutcomeText}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function applyVariant() {
+      document.body.classList.toggle('minimal-mode', state.variant === 'minimal');
+    }
+
+    function setActive(selector, value, attr) {
+      document.querySelectorAll(selector).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset[attr] === value);
+      });
+    }
+
+    function scrambleText(el, finalText, duration = 900) {
+      if (!el) return;
+      const chars = '!<>-_[]{}—=+*^?#____';
+      const originalHTML = finalText;
+      const safeText = finalText.replace(/<[^>]*>/g, '');
+      let frame = 0;
+      const total = Math.max(12, Math.floor(duration / 40));
+      const interval = setInterval(() => {
+        const progress = frame / total;
+        let output = '';
+        for (let i = 0; i < safeText.length; i++) {
+          if (safeText[i] === ' ') output += ' ';
+          else if (i < safeText.length * progress) output += safeText[i];
+          else output += chars[Math.floor(Math.random() * chars.length)];
+        }
+        el.textContent = output;
+        frame++;
+        if (frame > total) {
+          clearInterval(interval);
+          if (/<[^>]*>/.test(originalHTML)) el.innerHTML = originalHTML;
+          else el.textContent = finalText;
+        }
+      }, 40);
+    }
+
+    function triggerCrowdGlow(intensity = 1) {
+      if (state.variant === 'minimal') return;
+      crowdGlow.classList.add('active');
+      document.querySelectorAll('.glow').forEach((g, idx) => {
+        g.style.opacity = String(0.2 + intensity * 0.08);
+        g.style.transform = `scale(${1.02 + idx * 0.02})`;
+      });
+      setTimeout(() => {
+        crowdGlow.classList.remove('active');
+        document.querySelectorAll('.glow').forEach(g => {
+          g.style.opacity = '';
+          g.style.transform = '';
+        });
+      }, 1100);
+    }
+
+    function startHeroIdleAutoplay() {
+      if (!heroSvg) return;
+      const strings = [...heroSvg.querySelectorAll('.hero-string')];
+      let step = 0;
+      setInterval(() => {
+        if (state.variant === 'minimal') return;
+        strings.forEach((path, index) => {
+          const base = path.dataset.base;
+          const match = base.match(/M(\d+) (\d+) Q(\d+) (\d+) (\d+) (\d+)/);
+          if (!match) return;
+          const values = match.slice(1).map(Number);
+          const [x1, y1, cx, cy, x2, y2] = values;
+          const wave = Math.sin((Date.now() / 700) + index + step) * (8 + index * 1.8);
+          path.setAttribute('d', `M${x1} ${y1} Q${cx} ${(cy + wave).toFixed(1)} ${x2} ${y2}`);
+        });
+        if (step % 2 === 0) triggerCrowdGlow(0.8);
+        step++;
+      }, 2200);
+    }
+
+    function runIntro() {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || state.variant === 'minimal') {
+        introOverlay.classList.add('is-hidden');
+        document.body.classList.remove('intro-lock');
+        return;
+      }
+      introTitle.textContent = '';
+      scrambleText(introTitle, copy[state.lang].introTitle, 1200);
+      setTimeout(() => triggerCrowdGlow(1.2), 650);
+      setTimeout(() => {
+        introOverlay.classList.add('is-hidden');
+        document.body.classList.remove('intro-lock');
+      }, 2200);
+    }
+
+    function reScrambleHeroTitle() {
+      const target = document.querySelector('h1[data-i18n="heroTitle"]');
+      if (!target || state.variant === 'minimal') return;
+      scrambleText(target, copy[state.lang].heroTitle, 850);
+    }
+
+    function renderAll() {
+      applyStaticCopy();
+      renderHeroKpis();
+      renderSummary();
+      renderCards(conceptGrid, copy[state.lang].conceptCards);
+      renderCards(processGrid, copy[state.lang].processCards);
+      renderLevels();
+      renderFinal();
+      applyVariant();
+      setActive('[data-lang]', state.lang, 'lang');
+      setActive('[data-variant]', state.variant, 'variant');
+      setActive('[data-view]', state.view, 'view');
+      document.documentElement.lang = state.lang;
+    }
+
+    document.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => {
+      state.lang = btn.dataset.lang;
+      renderAll();
+      reScrambleHeroTitle();
+      introSub.textContent = copy[state.lang].introSub;
+      triggerCrowdGlow(1);
+    }));
+
+    document.querySelectorAll('[data-variant]').forEach(btn => btn.addEventListener('click', () => {
+      state.variant = btn.dataset.variant;
+      renderAll();
+      if (state.variant === 'minimal') {
+        introOverlay.classList.add('is-hidden');
+        document.body.classList.remove('intro-lock');
+      } else {
+        triggerCrowdGlow(.9);
+        reScrambleHeroTitle();
+      }
+    }));
+
+    document.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', () => {
+      state.view = btn.dataset.view;
+      renderAll();
+      triggerCrowdGlow(.7);
+    }));
+
+    renderAll();
+    runIntro();
+    setTimeout(() => reScrambleHeroTitle(), 2600);
+    startHeroIdleAutoplay();
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) triggerCrowdGlow(.7);
+    });
+  </script>
+</body>
+</html>
